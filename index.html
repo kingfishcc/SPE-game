@@ -74,6 +74,15 @@
             transform: scale(1.1);
         }
 
+        /* 👑 破曉終極修正：當部件放入組裝格子內時，自動 100% 貼齊並拔除陰影 */
+        .dropzone .piece {
+            width: 100% !important;
+            height: 100% !important;
+            box-shadow: none !important;
+            border-radius: 4px !important;
+            line-height: 1 !important;
+        }
+
         .title-3d {
             color: #FFD700;
             text-shadow: 
@@ -86,14 +95,21 @@
 <body class="min-h-screen flex flex-col items-center pt-8 relative overflow-x-hidden">
     <div class="cloud-bg"></div>
 
-    <!-- 隱藏的背景音樂，設定 loop 無限循環，已改為 mp3 格式 -->
     <audio id="bgMusic" loop>
         <source src="BGM.mp3" type="audio/mpeg">
-        你的瀏覽器不支援音樂播放。
     </audio>
 
     <button id="reset-btn" class="absolute top-4 left-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
         重置雲端
+    </button>
+
+    <button id="music-btn" class="absolute top-3 right-16 text-gray-800/10 z-50 cursor-pointer hover:text-gray-800/50 transition-all flex items-center justify-center">
+        <svg id="icon-vol-up" class="hidden" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px; height:24px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+        </svg>
+        <svg id="icon-vol-off" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px; height:24px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+        </svg>
     </button>
 
     <button id="test-btn" class="absolute top-4 right-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
@@ -188,8 +204,31 @@
         let html5QrcodeScanner;
         
         const bgMusic = document.getElementById("bgMusic");
+        const musicBtn = document.getElementById("music-btn");
+        const iconVolUp = document.getElementById("icon-vol-up");
+        const iconVolOff = document.getElementById("icon-vol-off");
+
         const isDisplayMode = window.location.search.includes('mode=display');
         const isScannerMode = window.location.search.includes('mode=scanner');
+
+        function updateMusicIcon() {
+            if (bgMusic.paused) {
+                iconVolUp.classList.add('hidden');
+                iconVolOff.classList.remove('hidden');
+            } else {
+                iconVolUp.classList.remove('hidden');
+                iconVolOff.classList.add('hidden');
+            }
+        }
+
+        musicBtn.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
+            } else {
+                bgMusic.pause();
+                updateMusicIcon();
+            }
+        });
 
         function createCollectionSlots(group, layouts) {
             const container = document.getElementById(`${group}-collection`);
@@ -379,7 +418,7 @@
         }
 
         document.getElementById('start-btn').addEventListener('click', () => {
-            bgMusic.play().catch(error => console.log("音樂播放受限", error));
+            bgMusic.play().then(updateMusicIcon).catch(error => console.log("音樂播放受限", error));
             
             revealProgressArea();
             document.getElementById('start-btn').style.display = 'none';
@@ -398,7 +437,7 @@
         });
 
         document.getElementById('test-btn').addEventListener('click', () => {
-            bgMusic.play().catch(error => console.log("音樂播放受限", error));
+            bgMusic.play().then(updateMusicIcon).catch(error => console.log("音樂播放受限", error));
             
             if(html5QrcodeScanner) {
                 try { html5QrcodeScanner.clear(); } catch(e) {}
@@ -428,12 +467,13 @@
                 revealProgressArea();
                 
                 document.body.addEventListener('click', () => {
-                    bgMusic.play().catch(error => console.log("音樂播放受限", error));
+                    bgMusic.play().then(updateMusicIcon).catch(error => console.log("音樂播放受限", error));
                 }, { once: true });
                 
             } else if (isScannerMode) {
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
+                document.getElementById('music-btn').style.display = 'none';
             }
         };
     </script>
