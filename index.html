@@ -27,12 +27,8 @@
             font-size: 24px; /* 12的倍數 */
         }
         body {
+            /* 修正：移除舊的圓點背景，只保留天空藍底色，解決巨大的白圈圈問題 */
             background-color: #65C7F7;
-            background-image: 
-                radial-gradient(circle at 20% 30%, white 3%, transparent 4%),
-                radial-gradient(circle at 80% 20%, white 2%, transparent 3%),
-                radial-gradient(circle at 10% 70%, white 4%, transparent 5%),
-                radial-gradient(circle at 75% 80%, white 3%, transparent 4%);
         }
         
         /* 增加白雲背景裝飾 (純CSS繪製) */
@@ -60,11 +56,14 @@
 
         .floor {
             background-color: #FFD700;
-            background-image: 
-                linear-gradient(45deg, #e6c200 25%, transparent 25%, transparent 75%, #e6c200 75%, #e6c200), 
-                linear-gradient(45deg, #e6c200 25%, transparent 25%, transparent 75%, #e6c200 75%, #e6c200);
-            background-size: 48px 48px; /* 12的倍數 */
-            background-position: 0 0, 24px 24px;
+            /* 修正：改為純斜線設計，符合原圖的木地板視覺 */
+            background-image: repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 44px,
+                #D4AF37 44px,
+                #D4AF37 48px
+            );
             border-top: 24px solid #F3F4F6;
         }
 
@@ -106,7 +105,8 @@
 
     <!-- 掃描啟動區塊 -->
     <div id="scanner-container" class="w-full max-w-sm px-4 mb-6 z-10 flex flex-col items-center mx-auto">
-        <div id="reader" class="w-full bg-white rounded-xl overflow-hidden shadow-lg border-4 border-[#003366]"></div>
+        <!-- 修正：移除了 border-4 與 shadow，解決空狀態時出現一條藍線的問題 -->
+        <div id="reader" class="w-full rounded-xl overflow-hidden"></div>
         <!-- 圖一純紅膠囊按鈕 -->
         <button id="start-btn" class="mt-4 bg-[#FF0000] text-white font-black py-2 px-8 rounded-full shadow-md hover:bg-red-700 transition tracking-widest w-auto cursor-pointer border-none text-[24px]">
             LET'S PLAY!
@@ -401,6 +401,9 @@
         document.getElementById('start-btn').addEventListener('click', () => {
             revealProgressArea();
             document.getElementById('start-btn').style.display = 'none';
+            // 加入黑框樣式，讓相機啟動時才顯示邊框
+            document.getElementById('reader').classList.add('border-4', 'border-[#003366]', 'shadow-lg');
+            
             html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start(
                 { facingMode: "environment" }, 
@@ -409,6 +412,7 @@
             ).catch(err => {
                 document.getElementById('error-msg').innerText = "無法開啟相機，請確定有允許瀏覽器使用相機權限喔！";
                 document.getElementById('start-btn').style.display = 'inline-block';
+                document.getElementById('reader').classList.remove('border-4', 'border-[#003366]', 'shadow-lg');
             });
         });
 
