@@ -74,12 +74,18 @@
             transform: scale(1.1);
         }
 
+        /* 👑 日出終極修正：部件放入田字格後，拔除邊框與背景，讓字形空間最大化並完美融合 */
         .dropzone .piece {
             width: 100% !important;
             height: 100% !important;
             box-shadow: none !important;
-            border-radius: 4px !important;
+            border: none !important;               /* 拔除外框，釋放文字空間 */
+            background-color: transparent !important; /* 變透明，融入白色田字格 */
+            border-radius: 0 !important;
             line-height: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         .title-3d {
@@ -98,7 +104,6 @@
         <source src="BGM.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- 操控區：重置與測試放在左邊 -->
     <button id="reset-btn" class="absolute top-4 left-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
         重置
     </button>
@@ -107,7 +112,6 @@
         測試
     </button>
 
-    <!-- 操控區：音樂圖示獨立放在右邊 -->
     <button id="music-btn" class="absolute top-4 right-4 text-gray-800/10 z-50 cursor-pointer hover:text-gray-800/50 transition-all flex items-center justify-center">
         <svg id="icon-vol-up" class="hidden" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px; height:16px;">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
