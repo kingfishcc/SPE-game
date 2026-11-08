@@ -16,7 +16,7 @@
     <style>
         @font-face {
             font-family: "Cubic 11";
-            src: url("Cubic_11.woff2") format("woff2"); /* 直接讀取同一層的字體檔 */
+            src: url("Cubic_11.woff2") format("woff2"); 
             font-display: swap;
         }
         :root {
@@ -24,14 +24,12 @@
         }
         *, body, button, input, select, textarea, h1, h2, h3, p, span, div, label {
             font-family: var(--main-font) !important;
-            font-size: 24px; /* 12的倍數 */
+            font-size: 24px; 
         }
         body {
-            /* 修正：移除舊的圓點背景，只保留天空藍底色，解決巨大的白圈圈問題 */
             background-color: #65C7F7;
         }
         
-        /* 增加白雲背景裝飾 (純CSS繪製) */
         .cloud-bg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -56,7 +54,6 @@
 
         .floor {
             background-color: #FFD700;
-            /* 修正：改為純斜線設計，符合原圖的木地板視覺 */
             background-image: repeating-linear-gradient(
                 -45deg,
                 transparent,
@@ -69,13 +66,15 @@
 
         .piece {
             transition: transform 0.1s;
+            /* 觸控優化關鍵：禁止瀏覽器預設手勢，讓拖曳零延遲 */
+            touch-action: none;
+            user-select: none;
         }
         .piece.sortable-drag {
             opacity: 0.8;
             transform: scale(1.1);
         }
 
-        /* 標題圖一黃底藍邊立體效果 */
         .title-3d {
             color: #FFD700;
             text-shadow: 
@@ -88,36 +87,28 @@
 <body class="min-h-screen flex flex-col items-center pt-8 relative overflow-x-hidden">
     <div class="cloud-bg"></div>
 
-    <!-- 左上角：重置雲端按鈕 (極淡避免誤觸，字級12px) -->
     <button id="reset-btn" class="absolute top-4 left-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
         重置雲端
     </button>
 
-    <!-- 右上角：一鍵測試按鈕 (極淡避免誤觸，字級12px) -->
     <button id="test-btn" class="absolute top-4 right-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
         測試
     </button>
 
-    <!-- 標題：圖一立體字風格，字級48px -->
     <h1 class="text-[48px] font-black mb-6 text-center tracking-wide relative z-10 leading-tight mx-auto title-3d">
         特需課程<br>解謎事件
     </h1>
 
-    <!-- 掃描啟動區塊 -->
     <div id="scanner-container" class="w-full max-w-sm px-4 mb-6 z-10 flex flex-col items-center mx-auto">
-        <!-- 修正：移除了 border-4 與 shadow，解決空狀態時出現一條藍線的問題 -->
         <div id="reader" class="w-full rounded-xl overflow-hidden"></div>
-        <!-- 圖一純紅膠囊按鈕 -->
         <button id="start-btn" class="mt-4 bg-[#FF0000] text-white font-black py-2 px-8 rounded-full shadow-md hover:bg-red-700 transition tracking-widest w-auto cursor-pointer border-none text-[24px]">
             LET'S PLAY!
         </button>
         <p id="error-msg" class="text-white text-center mt-2 font-bold drop-shadow-md text-[24px]"></p>
     </div>
 
-    <!-- 進度區塊：三欄排版 -->
     <div id="progress-area" style="display: none;" class="w-full max-w-[1200px] px-4 z-10 pb-36 grid grid-cols-1 lg:grid-cols-3 gap-6 mx-auto">
         
-        <!-- 線索一 -->
         <div class="bg-white p-4 rounded-xl shadow-lg border-4 border-[#003366] flex flex-col h-full">
             <h2 class="text-[24px] font-black text-[#003366] text-center mb-4 border-b-4 border-[#FFD700] inline-block mx-auto flex justify-center w-max pb-1">線索一 (<span id="wang-count">0</span>/7)</h2>
             <div id="wang-collection" class="flex flex-col gap-2 items-center flex-grow"></div>
@@ -128,7 +119,6 @@
             <div id="wang-done" class="hidden text-[36px] font-black text-[#003366] text-center tracking-widest py-4 mt-auto"></div>
         </div>
 
-        <!-- 線索二 -->
         <div class="bg-white p-4 rounded-xl shadow-lg border-4 border-[#003366] flex flex-col h-full">
             <h2 class="text-[24px] font-black text-[#003366] text-center mb-4 border-b-4 border-[#FFD700] inline-block mx-auto flex justify-center w-max pb-1">線索二 (<span id="lin-count">0</span>/7)</h2>
             <div id="lin-collection" class="flex flex-col gap-2 items-center flex-grow"></div>
@@ -139,7 +129,6 @@
             <div id="lin-done" class="hidden text-[36px] font-black text-[#003366] text-center tracking-widest py-4 mt-auto"></div>
         </div>
 
-        <!-- 線索三 -->
         <div class="bg-white p-4 rounded-xl shadow-lg border-4 border-[#003366] flex flex-col h-full">
             <h2 class="text-[24px] font-black text-[#003366] text-center mb-4 border-b-4 border-[#FFD700] inline-block mx-auto flex justify-center w-max pb-1">線索三 (<span id="eng-count">0</span>/13)</h2>
             <div id="eng-collection" class="flex flex-col gap-2 items-center flex-grow"></div>
@@ -153,12 +142,10 @@
 
     <div class="floor absolute bottom-0 left-0 w-full h-24 z-0"></div>
 
-    <!-- 引入 Firebase 模組與主程式邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Firebase 設定
         const firebaseConfig = {
             apiKey: "AIzaSyAKitKzkqS5_K7lehivcAAZoGX_u4-LsQs",
             authDomain: "typeace-c8f54.firebaseapp.com",
@@ -195,7 +182,6 @@
         let collected = { wang: [], lin: [], eng: [] };
         let html5QrcodeScanner;
 
-        // 判斷目前的網址模式
         const isDisplayMode = window.location.search.includes('mode=display');
         const isScannerMode = window.location.search.includes('mode=scanner');
 
@@ -208,7 +194,6 @@
                 row.className = 'flex gap-2 justify-center w-full flex-nowrap';
                 for (let i = 0; i < count; i++) {
                     const slot = document.createElement('div');
-                    // 圖二外框：圓角 rounded-lg，深藍色邊框，固定 36px
                     slot.className = 'w-[36px] h-[36px] border-2 border-dashed border-[#003366] rounded-lg flex items-center justify-center bg-white flex-none';
                     slot.id = `${group}-slot-${idCounter++}`;
                     row.appendChild(slot);
@@ -224,7 +209,6 @@
         }
 
         function revealProgressArea() {
-            // 如果是學生的「純掃描模式」，就絕對不要顯示進度區塊
             if (!isScannerMode) {
                 document.getElementById('progress-area').style.display = 'grid';
             }
@@ -232,7 +216,6 @@
 
         function createCharGrid(direction, slotsCount, prefix) {
             const wrapper = document.createElement('div');
-            // 田字格外框：固定 96px 正方形，拒絕變形
             wrapper.className = `flex gap-1 p-1 border-2 border-[#003366] bg-white rounded-xl flex-none w-[96px] h-[96px] ${direction === 'tb' ? 'flex-col' : 'flex-row'}`;
             for(let i = 0; i < slotsCount; i++) {
                 const slot = document.createElement('div');
@@ -279,17 +262,17 @@
             const pieces = collected[group].sort(() => Math.random() - 0.5);
             pieces.forEach(p => {
                 const pieceDiv = document.createElement('div');
-                // 圖二實體碎片：立體底部陰影，36px，字級 24px
                 pieceDiv.className = 'piece w-[36px] h-[36px] flex items-center justify-center font-bold rounded-lg bg-[#FFD700] text-[#003366] border-2 border-[#003366] shadow-[0_4px_0_#003366] cursor-grab flex-none text-[24px]';
                 pieceDiv.innerText = p.char;
                 pool.appendChild(pieceDiv);
             });
 
+            // 拔除 delay 延遲，加上 fallbackOnBody 保證平板順暢拖曳
             Sortable.create(pool, {
                 group: { name: group, put: true },
                 animation: 150,
-                delay: 150,
-                delayOnTouchOnly: true
+                fallbackOnBody: true,
+                swapThreshold: 0.65
             });
 
             document.querySelectorAll(`#target-${group} .dropzone`).forEach(dz => {
@@ -299,6 +282,7 @@
                         put: function (to) { return to.el.children.length < 1; }
                     },
                     animation: 150,
+                    fallbackOnBody: true,
                     onAdd: function () { checkCompletion(group); }
                 });
             });
@@ -343,20 +327,15 @@
             doneDiv.classList.add('animate-bounce');
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
-
-        // --- Firebase 同步核心邏輯 ---
         
         onValue(piecesRef, (snapshot) => {
             const data = snapshot.val() || {};
             
-            // 清空本地記錄
             collected = { wang: [], lin: [], eng: [] };
-            initBoard(); // 重置空格
+            initBoard(); 
             
-            // 如果雲端有資料，且不是掃描模式，就顯示看板
             if(Object.keys(data).length > 0 && !isScannerMode) revealProgressArea();
 
-            // 重建收集進度與更新 UI
             Object.keys(data).forEach(key => {
                 if (puzzlePieces[key]) {
                     const p = puzzlePieces[key];
@@ -367,14 +346,12 @@
                     const slot = document.getElementById(`${p.group}-slot-${collected[p.group].length}`);
                     if (slot) {
                         slot.innerHTML = `<span>${p.char}</span>`;
-                        // 亮起的實體陰影碎片，36px，字級 24px
                         slot.className = 'w-[36px] h-[36px] border-2 border-[#003366] rounded-lg flex items-center justify-center bg-[#FFD700] text-[#003366] font-bold flex-none scale-110 transition-transform duration-300 shadow-[0_4px_0_#003366] text-[24px]';
                         setTimeout(() => slot.classList.remove('scale-110'), 300);
                     }
                 }
             });
 
-            // 檢查是否集滿並開啟組裝 (僅非掃描模式下)
             if (!isScannerMode) {
                 ['wang', 'lin', 'eng'].forEach(group => {
                     const max = group === 'eng' ? 13 : 7;
@@ -388,7 +365,6 @@
             }
         });
 
-        // 掃描成功寫入雲端
         function onScanSuccess(decodedText) {
             revealProgressArea();
             const key = decodedText.trim().toUpperCase();
@@ -397,11 +373,9 @@
             }
         }
 
-        // 開啟相機
         document.getElementById('start-btn').addEventListener('click', () => {
             revealProgressArea();
             document.getElementById('start-btn').style.display = 'none';
-            // 加入黑框樣式，讓相機啟動時才顯示邊框
             document.getElementById('reader').classList.add('border-4', 'border-[#003366]', 'shadow-lg');
             
             html5QrcodeScanner = new Html5Qrcode("reader");
@@ -416,7 +390,6 @@
             });
         });
 
-        // 一鍵集滿測試（將全部進度寫入雲端）
         document.getElementById('test-btn').addEventListener('click', () => {
             if(html5QrcodeScanner) {
                 try { html5QrcodeScanner.clear(); } catch(e) {}
@@ -428,7 +401,6 @@
             set(ref(db, 'pieces'), allPieces);
         });
 
-        // 重置雲端資料
         document.getElementById('reset-btn').addEventListener('click', () => {
             if(confirm("確定要清空雲端所有收集紀錄重新開始嗎？")) {
                 remove(ref(db, 'pieces')).then(() => {
@@ -437,18 +409,15 @@
             }
         });
 
-        // 初始化與身分模式判定
         window.onload = () => {
             initBoard();
             
             if (isDisplayMode) {
-                // 【大螢幕模式】：隱藏相機、測試與重置按鈕，自動展開線索區塊
                 document.getElementById('scanner-container').style.display = 'none';
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
                 revealProgressArea();
             } else if (isScannerMode) {
-                // 【學生平板模式】：隱藏測試與重置按鈕，永遠不展開線索區塊
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
             }
