@@ -76,3 +76,379 @@
             transform: scale(1.1);
         }
 
+        /* 標題圖一黃底藍邊立體效果 */
+        .title-3d {
+            color: #FFD700;
+            text-shadow: 
+                -3px -3px 0 #003366, 3px -3px 0 #003366, 
+                -3px 3px 0 #003366, 3px 3px 0 #003366,
+                0px 6px 0 #003366;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center pt-8 relative overflow-x-hidden">
+    <div class="cloud-bg"></div>
+
+    <!-- 左上角：重置雲端按鈕 (極淡避免誤觸，字級12px) -->
+    <button id="reset-btn" class="absolute top-4 left-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
+        重置雲端
+    </button>
+
+    <!-- 右上角：一鍵測試按鈕 (極淡避免誤觸，字級12px) -->
+    <button id="test-btn" class="absolute top-4 right-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
+        測試
+    </button>
+
+    <!-- 標題：圖一立體字風格，字級48px -->
+    <h1 class="text-[48px] font-black mb-6 text-center tracking-wide relative z-10 leading-tight mx-auto title-3d">
+        特需課程<br>解謎事件
+    </h1>
+
+    <!-- 掃描啟動區塊 -->
+    <div id="scanner-container" class="w-full max-w-sm px-4 mb-6 z-10 flex flex-col items-center mx-auto">
+        <div id="reader" class="w-full bg-white rounded-xl overflow-hidden shadow-lg border-4 border-[#003366]"></div>
+        <!-- 圖一純紅膠囊按鈕 -->
+        <button id="start-btn" class="mt-4 bg-[#FF0000] text-white font-black py-2 px-8 rounded-full shadow-md hover:bg-red-700 transition tracking-widest w-auto cursor-pointer border-none text-[24px]">
+            LET'S PLAY!
+        </button>
+        <p id="error-msg" class="text-white text-center mt-2 font-bold drop-shadow-md text-[24px]"></p>
+    </div>
+
+    <!-- 進度區塊：三欄排版 -->
+    <div id="progress-area" style="display: none;" class="w-full max-w-[1200px] px-4 z-10 pb-36 grid grid-cols-1 lg:grid-cols-3 gap-6 mx-auto">
+        
+        <!-- 線索一 -->
+        <div class="bg-white p-4 rounded-xl shadow-lg border-4 border-[#003366] flex flex-col h-full">
+            <h2 class="text-[24px] font-black text-[#003366] text-center mb-4 border-b-4 border-[#FFD700] inline-block mx-auto flex justify-center w-max pb-1">線索一 (<span id="wang-count">0</span>/7)</h2>
+            <div id="wang-collection" class="flex flex-col gap-2 items-center flex-grow"></div>
+            <div id="wang-assembly" class="hidden w-full flex-grow">
+                <div id="target-wang" class="flex gap-2 justify-center mb-4 min-h-[96px]"></div>
+                <div id="pool-wang" class="flex flex-wrap gap-2 justify-center p-3 bg-yellow-50 rounded-xl border-2 border-dashed border-yellow-400 min-h-[72px]"></div>
+            </div>
+            <div id="wang-done" class="hidden text-[36px] font-black text-[#003366] text-center tracking-widest py-4 mt-auto"></div>
+        </div>
+
+        <!-- 線索二 -->
+        <div class="bg-white p-4 rounded-xl shadow-lg border-4 border-[#003366] flex flex-col h-full">
+            <h2 class="text-[24px] font-black text-[#003366] text-center mb-4 border-b-4 border-[#FFD700] inline-block mx-auto flex justify-center w-max pb-1">線索二 (<span id="lin-count">0</span>/7)</h2>
+            <div id="lin-collection" class="flex flex-col gap-2 items-center flex-grow"></div>
+            <div id="lin-assembly" class="hidden w-full flex-grow">
+                <div id="target-lin" class="flex gap-2 justify-center mb-4 min-h-[96px]"></div>
+                <div id="pool-lin" class="flex flex-wrap gap-2 justify-center p-3 bg-yellow-50 rounded-xl border-2 border-dashed border-yellow-400 min-h-[72px]"></div>
+            </div>
+            <div id="lin-done" class="hidden text-[36px] font-black text-[#003366] text-center tracking-widest py-4 mt-auto"></div>
+        </div>
+
+        <!-- 線索三 -->
+        <div class="bg-white p-4 rounded-xl shadow-lg border-4 border-[#003366] flex flex-col h-full">
+            <h2 class="text-[24px] font-black text-[#003366] text-center mb-4 border-b-4 border-[#FFD700] inline-block mx-auto flex justify-center w-max pb-1">線索三 (<span id="eng-count">0</span>/13)</h2>
+            <div id="eng-collection" class="flex flex-col gap-2 items-center flex-grow"></div>
+            <div id="eng-assembly" class="hidden w-full flex-grow">
+                <div id="target-eng" class="flex flex-col gap-2 justify-center mb-4 min-h-[96px]"></div>
+                <div id="pool-eng" class="flex flex-wrap gap-2 justify-center p-3 bg-yellow-50 rounded-xl border-2 border-dashed border-yellow-400 min-h-[72px]"></div>
+            </div>
+            <div id="eng-done" class="hidden text-[48px] font-black text-[#FF0000] text-center tracking-widest leading-relaxed py-4 mt-auto"></div>
+        </div>
+    </div>
+
+    <div class="floor absolute bottom-0 left-0 w-full h-24 z-0"></div>
+
+    <!-- 引入 Firebase 模組與主程式邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKitKzkqS5_K7lehivcAAZoGX_u4-LsQs",
+            authDomain: "typeace-c8f54.firebaseapp.com",
+            projectId: "typeace-c8f54",
+            storageBucket: "typeace-c8f54.firebasestorage.app",
+            messagingSenderId: "544799963119",
+            appId: "1:544799963119:web:25dbee6e8bad94ef70a81a",
+            measurementId: "G-2XZL871D6V",
+            databaseURL: "https://typeace-c8f54-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const piecesRef = ref(db, 'pieces');
+
+        const puzzlePieces = {
+            "P1": { char: "一", group: "wang" }, "P2": { char: "土", group: "wang" },
+            "P3": { char: "口", group: "wang" }, "P4": { char: "壬", group: "wang" },
+            "P5": { char: "口", group: "wang" }, "P6": { char: "大", group: "wang" },
+            "P7": { char: "心", group: "wang" },
+            "P8": { char: "木", group: "lin" }, "P9": { char: "木", group: "lin" },
+            "P10": { char: "文", group: "lin" }, "P11": { char: "厂", group: "lin" },
+            "P12": { char: "彡", group: "lin" }, "P13": { char: "丹", group: "lin" },
+            "P14": { char: "彡", group: "lin" },
+            "P15": { char: "H", group: "eng" }, "P16": { char: "A", group: "eng" },
+            "P17": { char: "P", group: "eng" }, "P18": { char: "P", group: "eng" },
+            "P19": { char: "Y", group: "eng" }, "P20": { char: "B", group: "eng" },
+            "P21": { char: "I", group: "eng" }, "P22": { char: "R", group: "eng" },
+            "P23": { char: "T", group: "eng" }, "P24": { char: "H", group: "eng" },
+            "P25": { char: "D", group: "eng" }, "P26": { char: "A", group: "eng" },
+            "P27": { char: "Y", group: "eng" }
+        };
+
+        let collected = { wang: [], lin: [], eng: [] };
+        let html5QrcodeScanner;
+
+        // 判斷目前的網址模式
+        const isDisplayMode = window.location.search.includes('mode=display');
+        const isScannerMode = window.location.search.includes('mode=scanner');
+
+        function createCollectionSlots(group, layouts) {
+            const container = document.getElementById(`${group}-collection`);
+            container.innerHTML = '';
+            let idCounter = 1;
+            layouts.forEach(count => {
+                const row = document.createElement('div');
+                row.className = 'flex gap-2 justify-center w-full flex-nowrap';
+                for (let i = 0; i < count; i++) {
+                    const slot = document.createElement('div');
+                    // 圖二外框：圓角 rounded-lg，深藍色邊框，固定 36px
+                    slot.className = 'w-[36px] h-[36px] border-2 border-dashed border-[#003366] rounded-lg flex items-center justify-center bg-white flex-none';
+                    slot.id = `${group}-slot-${idCounter++}`;
+                    row.appendChild(slot);
+                }
+                container.appendChild(row);
+            });
+        }
+
+        function initBoard() {
+            createCollectionSlots('wang', [2, 2, 3]);
+            createCollectionSlots('lin', [2, 3, 2]);
+            createCollectionSlots('eng', [5, 5, 3]);
+        }
+
+        function revealProgressArea() {
+            // 如果是學生的「純掃描模式」，就絕對不要顯示進度區塊
+            if (!isScannerMode) {
+                document.getElementById('progress-area').style.display = 'grid';
+            }
+        }
+
+        function createCharGrid(direction, slotsCount, prefix) {
+            const wrapper = document.createElement('div');
+            // 田字格外框：固定 96px 正方形，拒絕變形
+            wrapper.className = `flex gap-1 p-1 border-2 border-[#003366] bg-white rounded-xl flex-none w-[96px] h-[96px] ${direction === 'tb' ? 'flex-col' : 'flex-row'}`;
+            for(let i = 0; i < slotsCount; i++) {
+                const slot = document.createElement('div');
+                slot.className = `dropzone flex-1 flex items-center justify-center border border-dashed border-[#003366] bg-white min-h-0 min-w-0 rounded-md`;
+                slot.id = `${prefix}-${i+1}`;
+                wrapper.appendChild(slot);
+            }
+            return wrapper;
+        }
+
+        function showTargetArea(group) {
+            document.getElementById(`${group}-collection`).style.display = 'none';
+            document.getElementById(`${group}-assembly`).style.display = 'block';
+
+            const targetContainer = document.getElementById(`target-${group}`);
+            const pool = document.getElementById(`pool-${group}`);
+            targetContainer.innerHTML = '';
+            pool.innerHTML = '';
+
+            if (group === 'wang') {
+                targetContainer.appendChild(createCharGrid('tb', 2, 'wang-t1'));
+                targetContainer.appendChild(createCharGrid('tb', 2, 'wang-t2'));
+                targetContainer.appendChild(createCharGrid('tb', 3, 'wang-t3'));
+            } else if (group === 'lin') {
+                targetContainer.appendChild(createCharGrid('lr', 2, 'lin-t1'));
+                targetContainer.appendChild(createCharGrid('tb', 3, 'lin-t2'));
+                targetContainer.appendChild(createCharGrid('lr', 2, 'lin-t3'));
+            } else if (group === 'eng') {
+                const layouts = [5, 5, 3];
+                let slotId = 1;
+                layouts.forEach(count => {
+                    const row = document.createElement('div');
+                    row.className = 'flex gap-2 justify-center w-full flex-nowrap';
+                    for(let i = 0; i < count; i++) {
+                        const slot = document.createElement('div');
+                        slot.className = 'dropzone w-[36px] h-[36px] border-2 border-dashed border-[#003366] rounded-lg flex items-center justify-center bg-white flex-none';
+                        slot.id = `eng-t-${slotId++}`;
+                        row.appendChild(slot);
+                    }
+                    targetContainer.appendChild(row);
+                });
+            }
+
+            const pieces = collected[group].sort(() => Math.random() - 0.5);
+            pieces.forEach(p => {
+                const pieceDiv = document.createElement('div');
+                // 圖二實體碎片：立體底部陰影，36px，字級 24px
+                pieceDiv.className = 'piece w-[36px] h-[36px] flex items-center justify-center font-bold rounded-lg bg-[#FFD700] text-[#003366] border-2 border-[#003366] shadow-[0_4px_0_#003366] cursor-grab flex-none text-[24px]';
+                pieceDiv.innerText = p.char;
+                pool.appendChild(pieceDiv);
+            });
+
+            Sortable.create(pool, {
+                group: { name: group, put: true },
+                animation: 150,
+                delay: 150,
+                delayOnTouchOnly: true
+            });
+
+            document.querySelectorAll(`#target-${group} .dropzone`).forEach(dz => {
+                Sortable.create(dz, {
+                    group: {
+                        name: group,
+                        put: function (to) { return to.el.children.length < 1; }
+                    },
+                    animation: 150,
+                    onAdd: function () { checkCompletion(group); }
+                });
+            });
+        }
+
+        function getAns(checks) {
+            for(let [id, char] of checks) {
+                const dz = document.getElementById(id);
+                if (!dz || dz.children.length === 0 || dz.children[0].innerText.trim() !== char) return false;
+            }
+            return true;
+        }
+
+        function checkCompletion(group) {
+            if (group === 'wang') {
+                if(getAns([['wang-t1-1', '一'], ['wang-t1-2', '土'], ['wang-t2-1', '口'], ['wang-t2-2', '壬'], ['wang-t3-1', '口'], ['wang-t3-2', '大'], ['wang-t3-3', '心']])) {
+                    triggerMerge('wang', '王呈恩');
+                }
+            } else if (group === 'lin') {
+                if(getAns([['lin-t1-1', '木'], ['lin-t1-2', '木'], ['lin-t2-1', '文'], ['lin-t2-2', '厂'], ['lin-t2-3', '彡'], ['lin-t3-1', '丹'], ['lin-t3-2', '彡']])) {
+                    triggerMerge('lin', '林彥彤');
+                }
+            } else if (group === 'eng') {
+                const correctEng = ['H','A','P','P','Y','B','I','R','T','H','D','A','Y'];
+                let isCorrect = true;
+                for(let i=0; i<13; i++) {
+                    const dz = document.getElementById(`eng-t-${i+1}`);
+                    if (!dz || dz.children.length === 0 || dz.children[0].innerText.trim() !== correctEng[i]) {
+                        isCorrect = false;
+                        break;
+                    }
+                }
+                if(isCorrect) triggerMerge('eng', 'HAPPY<br>BIRTHDAY');
+            }
+        }
+
+        function triggerMerge(group, finalHtml) {
+            document.getElementById(`${group}-assembly`).style.display = 'none';
+            const doneDiv = document.getElementById(`${group}-done`);
+            doneDiv.innerHTML = finalHtml;
+            doneDiv.style.display = 'block';
+            doneDiv.classList.add('animate-bounce');
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        }
+
+        // --- Firebase 同步核心邏輯 ---
+        
+        onValue(piecesRef, (snapshot) => {
+            const data = snapshot.val() || {};
+            
+            // 清空本地記錄
+            collected = { wang: [], lin: [], eng: [] };
+            initBoard(); // 重置空格
+            
+            // 如果雲端有資料，且不是掃描模式，就顯示看板
+            if(Object.keys(data).length > 0 && !isScannerMode) revealProgressArea();
+
+            // 重建收集進度與更新 UI
+            Object.keys(data).forEach(key => {
+                if (puzzlePieces[key]) {
+                    const p = puzzlePieces[key];
+                    collected[p.group].push({ key: key, char: p.char });
+                    
+                    document.getElementById(`${p.group}-count`).innerText = collected[p.group].length;
+                    
+                    const slot = document.getElementById(`${p.group}-slot-${collected[p.group].length}`);
+                    if (slot) {
+                        slot.innerHTML = `<span>${p.char}</span>`;
+                        // 亮起的實體陰影碎片，36px，字級 24px
+                        slot.className = 'w-[36px] h-[36px] border-2 border-[#003366] rounded-lg flex items-center justify-center bg-[#FFD700] text-[#003366] font-bold flex-none scale-110 transition-transform duration-300 shadow-[0_4px_0_#003366] text-[24px]';
+                        setTimeout(() => slot.classList.remove('scale-110'), 300);
+                    }
+                }
+            });
+
+            // 檢查是否集滿並開啟組裝 (僅非掃描模式下)
+            if (!isScannerMode) {
+                ['wang', 'lin', 'eng'].forEach(group => {
+                    const max = group === 'eng' ? 13 : 7;
+                    if (collected[group].length === max) {
+                        const collectionDiv = document.getElementById(`${group}-collection`);
+                        if (collectionDiv && collectionDiv.style.display !== 'none') {
+                            setTimeout(() => showTargetArea(group), 800);
+                        }
+                    }
+                });
+            }
+        });
+
+        // 掃描成功寫入雲端
+        function onScanSuccess(decodedText) {
+            revealProgressArea();
+            const key = decodedText.trim().toUpperCase();
+            if (puzzlePieces[key]) {
+                set(ref(db, 'pieces/' + key), true);
+            }
+        }
+
+        // 開啟相機
+        document.getElementById('start-btn').addEventListener('click', () => {
+            revealProgressArea();
+            document.getElementById('start-btn').style.display = 'none';
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess
+            ).catch(err => {
+                document.getElementById('error-msg').innerText = "無法開啟相機，請確定有允許瀏覽器使用相機權限喔！";
+                document.getElementById('start-btn').style.display = 'inline-block';
+            });
+        });
+
+        // 一鍵集滿測試（將全部進度寫入雲端）
+        document.getElementById('test-btn').addEventListener('click', () => {
+            if(html5QrcodeScanner) {
+                try { html5QrcodeScanner.clear(); } catch(e) {}
+            }
+            document.getElementById('scanner-container').style.display = 'none';
+            revealProgressArea();
+            const allPieces = {};
+            Object.keys(puzzlePieces).forEach(k => allPieces[k] = true);
+            set(ref(db, 'pieces'), allPieces);
+        });
+
+        // 重置雲端資料
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if(confirm("確定要清空雲端所有收集紀錄重新開始嗎？")) {
+                remove(ref(db, 'pieces')).then(() => {
+                    location.reload();
+                });
+            }
+        });
+
+        // 初始化與身分模式判定
+        window.onload = () => {
+            initBoard();
+            
+            if (isDisplayMode) {
+                // 【大螢幕模式】：隱藏相機、測試與重置按鈕，自動展開線索區塊
+                document.getElementById('scanner-container').style.display = 'none';
+                document.getElementById('test-btn').style.display = 'none';
+                document.getElementById('reset-btn').style.display = 'none';
+                revealProgressArea();
+            } else if (isScannerMode) {
+                // 【學生平板模式】：隱藏測試與重置按鈕，永遠不展開線索區塊
+                document.getElementById('test-btn').style.display = 'none';
+                document.getElementById('reset-btn').style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>
