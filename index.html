@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>特需課程/n解謎事件</title>
+    <title>特需課程解謎事件</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 html5-qrcode 掃描套件 -->
@@ -66,7 +66,6 @@
 
         .piece {
             transition: transform 0.1s;
-            /* 觸控優化關鍵：禁止瀏覽器預設手勢，讓拖曳零延遲 */
             touch-action: none;
             user-select: none;
         }
@@ -86,6 +85,12 @@
 </head>
 <body class="min-h-screen flex flex-col items-center pt-8 relative overflow-x-hidden">
     <div class="cloud-bg"></div>
+
+    <!-- 隱藏的背景音樂，設定 loop 無限循環，已改為 mp3 格式 -->
+    <audio id="bgMusic" loop>
+        <source src="BGM.mp3" type="audio/mpeg">
+        你的瀏覽器不支援音樂播放。
+    </audio>
 
     <button id="reset-btn" class="absolute top-4 left-4 text-gray-800/10 text-[12px] font-bold bg-transparent z-50 cursor-pointer hover:text-gray-800/50 transition-all">
         重置雲端
@@ -181,7 +186,8 @@
 
         let collected = { wang: [], lin: [], eng: [] };
         let html5QrcodeScanner;
-
+        
+        const bgMusic = document.getElementById("bgMusic");
         const isDisplayMode = window.location.search.includes('mode=display');
         const isScannerMode = window.location.search.includes('mode=scanner');
 
@@ -267,7 +273,6 @@
                 pool.appendChild(pieceDiv);
             });
 
-            // 拔除 delay 延遲，加上 fallbackOnBody 保證平板順暢拖曳
             Sortable.create(pool, {
                 group: { name: group, put: true },
                 animation: 150,
@@ -374,6 +379,8 @@
         }
 
         document.getElementById('start-btn').addEventListener('click', () => {
+            bgMusic.play().catch(error => console.log("音樂播放受限", error));
+            
             revealProgressArea();
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('reader').classList.add('border-4', 'border-[#003366]', 'shadow-lg');
@@ -391,6 +398,8 @@
         });
 
         document.getElementById('test-btn').addEventListener('click', () => {
+            bgMusic.play().catch(error => console.log("音樂播放受限", error));
+            
             if(html5QrcodeScanner) {
                 try { html5QrcodeScanner.clear(); } catch(e) {}
             }
@@ -417,6 +426,11 @@
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
                 revealProgressArea();
+                
+                document.body.addEventListener('click', () => {
+                    bgMusic.play().catch(error => console.log("音樂播放受限", error));
+                }, { once: true });
+                
             } else if (isScannerMode) {
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
