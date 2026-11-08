@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特需課程/n解謎事件</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 html5-qrcode 掃描套件 -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- 引入 confetti 慶祝彩帶套件 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- 引入 SortableJS 拖曳套件 -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <style>
+        @font-face {
+            font-family: "Cubic 11";
+            src: url("Cubic_11.woff2") format("woff2"); /* 直接讀取同一層的字體檔 */
+            font-display: swap;
+        }
+        :root {
+            --main-font: "Cubic 11", sans-serif;
+        }
+        *, body, button, input, select, textarea, h1, h2, h3, p, span, div, label {
+            font-family: var(--main-font) !important;
+            font-size: 24px; /* 12的倍數 */
+        }
+        body {
+            background-color: #65C7F7;
+            background-image: 
+                radial-gradient(circle at 20% 30%, white 3%, transparent 4%),
+                radial-gradient(circle at 80% 20%, white 2%, transparent 3%),
+                radial-gradient(circle at 10% 70%, white 4%, transparent 5%),
+                radial-gradient(circle at 75% 80%, white 3%, transparent 4%);
+        }
+        
+        /* 增加白雲背景裝飾 (純CSS繪製) */
+        .cloud-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+            background-image: 
+                radial-gradient(circle at 20% 10%, white 2%, transparent 2.5%),
+                radial-gradient(circle at 23% 12%, white 3%, transparent 3.5%),
+                radial-gradient(circle at 17% 12%, white 2.5%, transparent 3%),
+                
+                radial-gradient(circle at 80% 15%, white 2.5%, transparent 3%),
+                radial-gradient(circle at 84% 17%, white 3.5%, transparent 4%),
+                radial-gradient(circle at 76% 17%, white 3%, transparent 3.5%),
+
+                radial-gradient(circle at 10% 50%, white 3%, transparent 3.5%),
+                radial-gradient(circle at 14% 53%, white 4%, transparent 4.5%),
+                radial-gradient(circle at 6% 53%, white 3.5%, transparent 4%),
+
+                radial-gradient(circle at 88% 60%, white 2%, transparent 2.5%),
+                radial-gradient(circle at 92% 62%, white 3%, transparent 3.5%),
+                radial-gradient(circle at 84% 62%, white 2.5%, transparent 3%);
+        }
+
+        .floor {
+            background-color: #FFD700;
+            background-image: 
+                linear-gradient(45deg, #e6c200 25%, transparent 25%, transparent 75%, #e6c200 75%, #e6c200), 
+                linear-gradient(45deg, #e6c200 25%, transparent 25%, transparent 75%, #e6c200 75%, #e6c200);
+            background-size: 48px 48px; /* 12的倍數 */
+            background-position: 0 0, 24px 24px;
+            border-top: 24px solid #F3F4F6;
+        }
+
+        .piece {
+            transition: transform 0.1s;
+        }
+        .piece.sortable-drag {
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+
