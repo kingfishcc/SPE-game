@@ -127,9 +127,17 @@
     <div id="scanner-container" class="w-full max-w-sm px-4 mb-6 z-10 flex flex-col items-center mx-auto">
         <div id="reader" class="w-full rounded-xl overflow-hidden"></div>
         <button id="start-btn" class="mt-4 bg-[#FF0000] text-white font-black py-2 px-8 rounded-full shadow-md hover:bg-red-700 transition tracking-widest w-auto cursor-pointer border-none text-[24px]">
-            LET'S PLAY!
+            開啟相機
         </button>
-        <p id="error-msg" class="text-white text-center mt-2 font-bold drop-shadow-md text-[24px]"></p>
+        
+        <!-- 🔥 緊急備用：手動輸入代碼區塊 🔥 -->
+        <div class="mt-6 flex gap-2 items-center justify-center w-full bg-white/50 p-4 rounded-xl border-2 border-white border-dashed">
+            <span class="text-[18px] text-[#003366] font-bold">相機壞了？</span>
+            <input type="text" id="manual-code" placeholder="輸入 P 碼" class="border-2 border-[#003366] rounded-lg px-2 py-1 text-center w-24 uppercase font-bold text-[20px]">
+            <button id="manual-submit" class="bg-[#003366] text-white font-black py-1 px-4 rounded-lg shadow-md hover:bg-blue-900 transition text-[20px]">送出</button>
+        </div>
+
+        <p id="error-msg" class="text-white text-center mt-2 font-bold drop-shadow-md text-[20px]"></p>
     </div>
 
     <div id="progress-area" style="display: none;" class="w-full max-w-[1200px] px-4 z-10 pb-36 grid grid-cols-1 lg:grid-cols-3 gap-6 mx-auto">
@@ -421,6 +429,21 @@
             }
         }
 
+        // 🔥 緊急手動輸入功能 🔥
+        document.getElementById('manual-submit').addEventListener('click', () => {
+            if (!isScannerMode) {
+                bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
+            }
+            const key = document.getElementById('manual-code').value.trim().toUpperCase();
+            if (puzzlePieces[key]) {
+                set(ref(db, 'pieces/' + key), true);
+                document.getElementById('manual-code').value = ''; 
+                revealProgressArea();
+            } else {
+                alert("找不到這個代碼！請確認是輸入 P1 到 P27 喔！");
+            }
+        });
+
         document.getElementById('start-btn').addEventListener('click', () => {
             if (!isScannerMode) {
                 bgMusic.play().then(updateMusicIcon).catch(error => console.log("音樂播放受限", error));
@@ -432,11 +455,11 @@
             
             html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start(
-                { facingMode: { ideal: "environment" } }, // 改為 ideal，自動適配平板鏡頭
+                { facingMode: { ideal: "environment" } }, 
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 onScanSuccess
             ).catch(err => {
-                document.getElementById('error-msg').innerText = "無法開啟相機，請確定有允許瀏覽器使用相機權限喔！";
+                document.getElementById('error-msg').innerText = "相機被系統擋住了！請改用上方的手動輸入代碼！";
                 document.getElementById('start-btn').style.display = 'inline-block';
                 document.getElementById('reader').classList.remove('border-4', 'border-[#003366]', 'shadow-lg');
             });
