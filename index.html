@@ -74,13 +74,12 @@
             transform: scale(1.1);
         }
 
-        /* 👑 日出終極修正：部件放入田字格後，拔除邊框與背景，讓字形空間最大化並完美融合 */
         .dropzone .piece {
             width: 100% !important;
             height: 100% !important;
             box-shadow: none !important;
-            border: none !important;               /* 拔除外框，釋放文字空間 */
-            background-color: transparent !important; /* 變透明，融入白色田字格 */
+            border: none !important;
+            background-color: transparent !important;
             border-radius: 0 !important;
             line-height: 1 !important;
             display: flex !important;
@@ -433,7 +432,7 @@
             
             html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
+                { facingMode: { ideal: "environment" } }, // 改為 ideal，自動適配平板鏡頭
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 onScanSuccess
             ).catch(err => {
