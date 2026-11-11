@@ -126,10 +126,10 @@
             開啟相機
         </button>
         
-        <div id="manual-area" class="mt-6 flex gap-2 items-center justify-center w-full bg-white/50 p-4 rounded-xl border-2 border-white border-dashed">
-            <span class="text-[18px] text-[#003366] font-bold">手動打字：</span>
-            <input type="text" id="manual-code" placeholder="打 P碼 或 國字" class="border-2 border-[#003366] rounded-lg px-2 py-1 text-center w-36 uppercase font-bold text-[20px]">
-            <button id="manual-submit" class="bg-[#003366] text-white font-black py-1 px-4 rounded-lg shadow-md hover:bg-blue-900 transition text-[20px]">送出</button>
+        <!-- 🔥 免打字點擊收集區 (測試版常駐顯示) 🔥 -->
+        <div id="manual-area" style="display: none;" class="mt-6 flex flex-col gap-4 items-center justify-center w-full bg-white/60 p-4 rounded-xl border-4 border-white border-dashed">
+            <span class="text-[20px] text-[#003366] font-bold border-b-4 border-[#FFD700] pb-1">點擊收集找到的線索：</span>
+            <div id="manual-pieces-container" class="flex flex-wrap gap-2 justify-center w-full min-h-[50px]"></div>
         </div>
 
         <p id="error-msg" class="text-[#FF0000] bg-white/90 rounded-lg text-center mt-4 p-2 font-bold drop-shadow-md text-[18px] leading-relaxed empty:hidden"></p>
@@ -209,6 +209,7 @@
 
         let collected = { wang: [], lin: [], eng: [] };
         let html5QrcodeScanner = null;
+        let manualKeysOrder = []; 
         
         const bgMusic = document.getElementById("bgMusic");
         const musicBtn = document.getElementById("music-btn");
@@ -218,7 +219,6 @@
         const isDisplayMode = window.location.search.includes('mode=display');
         const isScannerMode = window.location.search.includes('mode=scanner');
 
-        // 安全下車機制
         window.addEventListener('beforeunload', () => {
             if (html5QrcodeScanner) {
                 try { html5QrcodeScanner.stop(); } catch(e) {}
@@ -319,7 +319,7 @@
                 });
             }
 
-            const pieces = collected[group].sort(() => Math.random() - 0.5);
+            let pieces = [...collected[group]];
             pieces.forEach(p => {
                 const pieceDiv = document.createElement('div');
                 pieceDiv.className = 'piece w-[36px] h-[36px] flex items-center justify-center font-bold rounded-lg bg-[#FFD700] text-[#003366] border-2 border-[#003366] shadow-[0_4px_0_#003366] cursor-grab flex-none text-[24px]';
@@ -386,6 +386,42 @@
             doneDiv.classList.add('animate-bounce');
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
+
+        // 🔥 初始化字庫隨機排序 🔥
+        function initManualKeys() {
+            if (manualKeysOrder.length === 0) {
+                manualKeysOrder = Object.keys(puzzlePieces);
+                for (let i = manualKeysOrder.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [manualKeysOrder[i], manualKeysOrder[j]] = [manualKeysOrder[j], manualKeysOrder[i]];
+                }
+            }
+        }
+
+        // 🔥 渲染點擊收集的按鈕字庫 🔥
+        function renderManualPieces() {
+            const container = document.getElementById('manual-pieces-container');
+            container.innerHTML = '';
+            
+            manualKeysOrder.forEach(key => {
+                const group = puzzlePieces[key].group;
+                const isCollected = collected[group].some(item => item.key === key);
+                
+                if (!isCollected) {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-[44px] h-[44px] bg-[#FFD700] border-2 border-[#003366] rounded-lg shadow-[0_4px_0_#003366] font-bold text-[#003366] text-[24px] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center flex-none cursor-pointer';
+                    btn.innerText = puzzlePieces[key].char;
+                    btn.onclick = () => {
+                        if (!isScannerMode) {
+                            bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
+                        }
+                        set(ref(db, 'pieces/' + key), true);
+                        revealProgressArea();
+                    };
+                    container.appendChild(btn);
+                }
+            });
+        }
         
         onValue(piecesRef, (snapshot) => {
             const data = snapshot.val() || {};
@@ -411,6 +447,10 @@
                 }
             });
 
+            // 資料更新時，同步重新渲染救援按鈕
+            initManualKeys();
+            renderManualPieces();
+
             if (!isScannerMode) {
                 ['wang', 'lin', 'eng'].forEach(group => {
                     const max = group === 'eng' ? 13 : 7;
@@ -432,38 +472,6 @@
             }
         }
 
-        document.getElementById('manual-submit').addEventListener('click', () => {
-            if (!isScannerMode) {
-                bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
-            }
-            const input = document.getElementById('manual-code').value.trim().toUpperCase();
-            let keyToUnlock = null;
-
-            if (puzzlePieces[input]) {
-                keyToUnlock = input; 
-            } else {
-                for (let k in puzzlePieces) {
-                    if (puzzlePieces[k].char.toUpperCase() === input) {
-                        const group = puzzlePieces[k].group;
-                        const isCollected = collected[group].some(item => item.key === k);
-                        if (!isCollected) {
-                            keyToUnlock = k;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (keyToUnlock) {
-                set(ref(db, 'pieces/' + keyToUnlock), true);
-                document.getElementById('manual-code').value = ''; 
-                revealProgressArea();
-            } else {
-                alert("找不到這個字，或者是這個字已經被解鎖過囉！");
-            }
-        });
-
-        // 🔥 終極版相機喚醒機制 🔥
         document.getElementById('start-btn').addEventListener('click', async () => {
             if (!isScannerMode) {
                 bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
@@ -472,19 +480,16 @@
             const btn = document.getElementById('start-btn');
             const errMsg = document.getElementById('error-msg');
             const reader = document.getElementById('reader');
+            const manualArea = document.getElementById('manual-area');
             
             revealProgressArea();
             btn.style.display = 'none';
             errMsg.innerText = "⏳ 正在請求相機權限...";
 
             try {
-                // 1. 強制原生呼叫相機，逼迫系統彈出「允許」視窗
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                
-                // 2. 確定拿到權限後，先把這個測試串流關掉，以免佔用鏡頭
                 stream.getTracks().forEach(track => track.stop());
                 
-                // 3. 權限搞定，正式交給掃描套件接手
                 errMsg.innerText = "";
                 reader.classList.add('border-4', 'border-[#003366]', 'shadow-lg');
                 
@@ -496,20 +501,20 @@
                 );
             } catch (err) {
                 console.error("相機錯誤:", err);
-                btn.style.display = 'inline-block';
+                btn.style.display = 'none';
                 reader.classList.remove('border-4', 'border-[#003366]', 'shadow-lg');
                 
-                // 精準翻譯系統底層的錯誤碼
+                // 相機失敗時，強制顯示救援點擊區
+                manualArea.style.display = 'flex'; 
+                
                 if (err.name === 'NotAllowedError') {
-                    errMsg.innerText = "❌ 瀏覽器相機權限被拒絕！請點擊網址列🔒打開權限。";
+                    errMsg.innerText = "相機被系統阻擋了！改用『點擊』收集線索過關吧！";
                 } else if (err.name === 'NotFoundError') {
-                    errMsg.innerText = "❌ 找不到平板/手機的後鏡頭！";
+                    errMsg.innerText = "找不到平板鏡頭！改用『點擊』收集線索過關吧！";
                 } else if (err.name === 'NotReadableError') {
-                    errMsg.innerText = "❌ 相機正被其他 App (如 LINE) 佔用中，請先滑掉關閉！";
-                } else if (err.name === 'OverconstrainedError') {
-                    errMsg.innerText = "❌ 這台設備的鏡頭不支援此要求，請嘗試換台設備。";
+                    errMsg.innerText = "相機被其他APP卡住！改用『點擊』收集線索過關吧！";
                 } else {
-                    errMsg.innerText = `❌ 相機開啟失敗 (${err.name || err})，請用手動輸入！`;
+                    errMsg.innerText = `相機無法使用！改用『點擊』收集線索過關吧！`;
                 }
             }
         });
@@ -539,9 +544,12 @@
         });
 
         window.onload = () => {
+            initManualKeys();
+            renderManualPieces();
             initBoard();
             
             if (isDisplayMode) {
+                // 大螢幕展示模式
                 document.getElementById('scanner-container').style.display = 'none';
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
@@ -553,9 +561,14 @@
                 }, { once: true });
                 
             } else if (isScannerMode) {
+                // 學生掃描模式：預設隱藏，相機失敗才出現
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
                 document.getElementById('music-btn').style.display = 'none';
+                document.getElementById('manual-area').style.display = 'none'; 
+            } else {
+                // 老師測試模式 (無參數)：相機與點擊區同時顯示
+                document.getElementById('manual-area').style.display = 'flex'; 
             }
         };
     </script>
