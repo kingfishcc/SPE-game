@@ -116,8 +116,9 @@
         </svg>
     </button>
 
+    <!-- 🔥 標題響應式設定：md:hidden 讓換行符號在大螢幕消失 🔥 -->
     <h1 class="text-[48px] font-black mb-6 text-center tracking-wide relative z-10 leading-tight mx-auto title-3d">
-        特需課程<br>解謎事件
+        特需課程<br class="md:hidden">解謎事件
     </h1>
 
     <div id="scanner-container" class="w-full max-w-sm px-4 mb-6 z-10 flex flex-col items-center mx-auto">
@@ -319,7 +320,6 @@
                 });
             }
 
-            // 完全依照收集時間的順序渲染 (此時的 collected[group] 已經是時間排序的)
             let pieces = [...collected[group]];
             pieces.forEach(p => {
                 const pieceDiv = document.createElement('div');
@@ -414,7 +414,6 @@
                         if (!isScannerMode) {
                             bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
                         }
-                        // 點擊收集時，紀錄當下的精準時間戳記 (微秒)
                         set(ref(db, 'pieces/' + key), Date.now());
                         revealProgressArea();
                     };
@@ -431,7 +430,6 @@
             
             if(Object.keys(data).length > 0 && !isScannerMode) revealProgressArea();
 
-            // 將 Firebase 回傳的資料轉為陣列，並按照「時間戳記」排序
             let timeOrderedPieces = [];
             Object.keys(data).forEach(key => {
                 if (puzzlePieces[key]) {
@@ -439,12 +437,11 @@
                         key: key,
                         char: puzzlePieces[key].char,
                         group: puzzlePieces[key].group,
-                        time: typeof data[key] === 'number' ? data[key] : 0 // 兼容未清空的舊資料
+                        time: typeof data[key] === 'number' ? data[key] : 0 
                     });
                 }
             });
 
-            // 嚴格按照收集時間 (小到大) 排序
             timeOrderedPieces.sort((a, b) => a.time - b.time);
 
             timeOrderedPieces.forEach(p => {
@@ -480,7 +477,6 @@
             revealProgressArea();
             const key = decodedText.trim().toUpperCase();
             if (puzzlePieces[key]) {
-                // 掃描成功時，紀錄當下的精準時間戳記
                 set(ref(db, 'pieces/' + key), Date.now());
             }
         }
@@ -540,7 +536,6 @@
             document.getElementById('scanner-container').style.display = 'none';
             revealProgressArea();
             const allPieces = {};
-            // 測試按鈕也給予遞增的時間戳記，確保順序
             Object.keys(puzzlePieces).forEach((k, idx) => allPieces[k] = Date.now() + idx);
             set(ref(db, 'pieces'), allPieces);
         });
@@ -579,6 +574,7 @@
                 document.getElementById('manual-area').style.display = 'none'; 
             } else {
                 document.getElementById('manual-area').style.display = 'flex'; 
+                revealProgressArea(); 
             }
         };
     </script>
