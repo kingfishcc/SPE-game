@@ -126,7 +126,6 @@
             開啟相機
         </button>
         
-        <!-- 🔥 免打字點擊收集區 (測試版常駐顯示) 🔥 -->
         <div id="manual-area" style="display: none;" class="mt-6 flex flex-col gap-4 items-center justify-center w-full bg-white/60 p-4 rounded-xl border-4 border-white border-dashed">
             <span class="text-[20px] text-[#003366] font-bold border-b-4 border-[#FFD700] pb-1">點擊收集找到的線索：</span>
             <div id="manual-pieces-container" class="flex flex-wrap gap-2 justify-center w-full min-h-[50px]"></div>
@@ -210,6 +209,7 @@
         let collected = { wang: [], lin: [], eng: [] };
         let html5QrcodeScanner = null;
         let manualKeysOrder = []; 
+        let isManualFallbackActive = false; 
         
         const bgMusic = document.getElementById("bgMusic");
         const musicBtn = document.getElementById("music-btn");
@@ -319,6 +319,7 @@
                 });
             }
 
+            // 完全依照收集時間的順序渲染 (此時的 collected[group] 已經是時間排序的)
             let pieces = [...collected[group]];
             pieces.forEach(p => {
                 const pieceDiv = document.createElement('div');
@@ -387,7 +388,6 @@
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
 
-        // 🔥 初始化字庫隨機排序 🔥
         function initManualKeys() {
             if (manualKeysOrder.length === 0) {
                 manualKeysOrder = Object.keys(puzzlePieces);
@@ -398,7 +398,6 @@
             }
         }
 
-        // 🔥 渲染點擊收集的按鈕字庫 🔥
         function renderManualPieces() {
             const container = document.getElementById('manual-pieces-container');
             container.innerHTML = '';
@@ -415,7 +414,8 @@
                         if (!isScannerMode) {
                             bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
                         }
-                        set(ref(db, 'pieces/' + key), true);
+                        // 點擊收集時，紀錄當下的精準時間戳記 (微秒)
+                        set(ref(db, 'pieces/' + key), Date.now());
                         revealProgressArea();
                     };
                     container.appendChild(btn);
@@ -431,23 +431,35 @@
             
             if(Object.keys(data).length > 0 && !isScannerMode) revealProgressArea();
 
+            // 將 Firebase 回傳的資料轉為陣列，並按照「時間戳記」排序
+            let timeOrderedPieces = [];
             Object.keys(data).forEach(key => {
                 if (puzzlePieces[key]) {
-                    const p = puzzlePieces[key];
-                    collected[p.group].push({ key: key, char: p.char });
-                    
-                    document.getElementById(`${p.group}-count`).innerText = collected[p.group].length;
-                    
-                    const slot = document.getElementById(`${p.group}-slot-${collected[p.group].length}`);
-                    if (slot) {
-                        slot.innerHTML = `<span>${p.char}</span>`;
-                        slot.className = 'w-[36px] h-[36px] border-2 border-[#003366] rounded-lg flex items-center justify-center bg-[#FFD700] text-[#003366] font-bold flex-none scale-110 transition-transform duration-300 shadow-[0_4px_0_#003366] text-[24px]';
-                        setTimeout(() => slot.classList.remove('scale-110'), 300);
-                    }
+                    timeOrderedPieces.push({
+                        key: key,
+                        char: puzzlePieces[key].char,
+                        group: puzzlePieces[key].group,
+                        time: typeof data[key] === 'number' ? data[key] : 0 // 兼容未清空的舊資料
+                    });
                 }
             });
 
-            // 資料更新時，同步重新渲染救援按鈕
+            // 嚴格按照收集時間 (小到大) 排序
+            timeOrderedPieces.sort((a, b) => a.time - b.time);
+
+            timeOrderedPieces.forEach(p => {
+                collected[p.group].push({ key: p.key, char: p.char });
+                
+                document.getElementById(`${p.group}-count`).innerText = collected[p.group].length;
+                
+                const slot = document.getElementById(`${p.group}-slot-${collected[p.group].length}`);
+                if (slot) {
+                    slot.innerHTML = `<span>${p.char}</span>`;
+                    slot.className = 'w-[36px] h-[36px] border-2 border-[#003366] rounded-lg flex items-center justify-center bg-[#FFD700] text-[#003366] font-bold flex-none scale-110 transition-transform duration-300 shadow-[0_4px_0_#003366] text-[24px]';
+                    setTimeout(() => slot.classList.remove('scale-110'), 300);
+                }
+            });
+
             initManualKeys();
             renderManualPieces();
 
@@ -468,7 +480,8 @@
             revealProgressArea();
             const key = decodedText.trim().toUpperCase();
             if (puzzlePieces[key]) {
-                set(ref(db, 'pieces/' + key), true);
+                // 掃描成功時，紀錄當下的精準時間戳記
+                set(ref(db, 'pieces/' + key), Date.now());
             }
         }
 
@@ -504,7 +517,6 @@
                 btn.style.display = 'none';
                 reader.classList.remove('border-4', 'border-[#003366]', 'shadow-lg');
                 
-                // 相機失敗時，強制顯示救援點擊區
                 manualArea.style.display = 'flex'; 
                 
                 if (err.name === 'NotAllowedError') {
@@ -528,7 +540,8 @@
             document.getElementById('scanner-container').style.display = 'none';
             revealProgressArea();
             const allPieces = {};
-            Object.keys(puzzlePieces).forEach(k => allPieces[k] = true);
+            // 測試按鈕也給予遞增的時間戳記，確保順序
+            Object.keys(puzzlePieces).forEach((k, idx) => allPieces[k] = Date.now() + idx);
             set(ref(db, 'pieces'), allPieces);
         });
 
@@ -549,7 +562,6 @@
             initBoard();
             
             if (isDisplayMode) {
-                // 大螢幕展示模式
                 document.getElementById('scanner-container').style.display = 'none';
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
@@ -561,13 +573,11 @@
                 }, { once: true });
                 
             } else if (isScannerMode) {
-                // 學生掃描模式：預設隱藏，相機失敗才出現
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
                 document.getElementById('music-btn').style.display = 'none';
                 document.getElementById('manual-area').style.display = 'none'; 
             } else {
-                // 老師測試模式 (無參數)：相機與點擊區同時顯示
                 document.getElementById('manual-area').style.display = 'flex'; 
             }
         };
