@@ -132,7 +132,7 @@
             <button id="manual-submit" class="bg-[#003366] text-white font-black py-1 px-4 rounded-lg shadow-md hover:bg-blue-900 transition text-[20px]">送出</button>
         </div>
 
-        <p id="error-msg" class="text-red-600 text-center mt-2 font-bold drop-shadow-md text-[18px] bg-white/80 px-2 py-1 rounded hidden"></p>
+        <p id="error-msg" class="text-[#FF0000] bg-white/90 rounded-lg text-center mt-4 p-2 font-bold drop-shadow-md text-[18px] leading-relaxed empty:hidden"></p>
     </div>
 
     <div id="progress-area" style="display: none;" class="w-full max-w-[1200px] px-4 z-10 pb-36 grid grid-cols-1 lg:grid-cols-3 gap-6 mx-auto">
@@ -218,6 +218,7 @@
         const isDisplayMode = window.location.search.includes('mode=display');
         const isScannerMode = window.location.search.includes('mode=scanner');
 
+        // 安全下車機制
         window.addEventListener('beforeunload', () => {
             if (html5QrcodeScanner) {
                 try { html5QrcodeScanner.stop(); } catch(e) {}
@@ -462,27 +463,55 @@
             }
         });
 
-        document.getElementById('start-btn').addEventListener('click', () => {
+        // 🔥 終極版相機喚醒機制 🔥
+        document.getElementById('start-btn').addEventListener('click', async () => {
             if (!isScannerMode) {
-                bgMusic.play().then(updateMusicIcon).catch(error => console.log("音樂播放受限", error));
+                bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
             }
             
-            document.getElementById('error-box').classList.add('hidden');
+            const btn = document.getElementById('start-btn');
+            const errMsg = document.getElementById('error-msg');
+            const reader = document.getElementById('reader');
+            
             revealProgressArea();
-            document.getElementById('start-btn').style.display = 'none';
-            document.getElementById('reader').classList.add('border-4', 'border-[#003366]', 'shadow-lg');
-            
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            
-            // 🔥 錯誤修正：恢復 html5-qrcode 官方支援的 facingMode 格式 🔥
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess
-            ).catch(err => {
-                document.getElementById('error-box').classList.remove('hidden');
-                document.getElementById('error-msg').innerText = err;
-            });
+            btn.style.display = 'none';
+            errMsg.innerText = "⏳ 正在請求相機權限...";
+
+            try {
+                // 1. 強制原生呼叫相機，逼迫系統彈出「允許」視窗
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                
+                // 2. 確定拿到權限後，先把這個測試串流關掉，以免佔用鏡頭
+                stream.getTracks().forEach(track => track.stop());
+                
+                // 3. 權限搞定，正式交給掃描套件接手
+                errMsg.innerText = "";
+                reader.classList.add('border-4', 'border-[#003366]', 'shadow-lg');
+                
+                html5QrcodeScanner = new Html5Qrcode("reader");
+                await html5QrcodeScanner.start(
+                    { facingMode: "environment" }, 
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    onScanSuccess
+                );
+            } catch (err) {
+                console.error("相機錯誤:", err);
+                btn.style.display = 'inline-block';
+                reader.classList.remove('border-4', 'border-[#003366]', 'shadow-lg');
+                
+                // 精準翻譯系統底層的錯誤碼
+                if (err.name === 'NotAllowedError') {
+                    errMsg.innerText = "❌ 瀏覽器相機權限被拒絕！請點擊網址列🔒打開權限。";
+                } else if (err.name === 'NotFoundError') {
+                    errMsg.innerText = "❌ 找不到平板/手機的後鏡頭！";
+                } else if (err.name === 'NotReadableError') {
+                    errMsg.innerText = "❌ 相機正被其他 App (如 LINE) 佔用中，請先滑掉關閉！";
+                } else if (err.name === 'OverconstrainedError') {
+                    errMsg.innerText = "❌ 這台設備的鏡頭不支援此要求，請嘗試換台設備。";
+                } else {
+                    errMsg.innerText = `❌ 相機開啟失敗 (${err.name || err})，請用手動輸入！`;
+                }
+            }
         });
 
         document.getElementById('test-btn').addEventListener('click', () => {
