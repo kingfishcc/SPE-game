@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>特需課程解謎事件</title>
-    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 html5-qrcode 掃描套件 -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- 引入 confetti 慶祝彩帶套件 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- 引入 SortableJS 拖曳套件 -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     
     <style>
@@ -130,14 +126,13 @@
             開啟相機
         </button>
         
-        <!-- 🔥 緊急備用：手動輸入代碼區塊 🔥 -->
-        <div class="mt-6 flex gap-2 items-center justify-center w-full bg-white/50 p-4 rounded-xl border-2 border-white border-dashed">
-            <span class="text-[18px] text-[#003366] font-bold">相機壞了？</span>
-            <input type="text" id="manual-code" placeholder="輸入 P 碼" class="border-2 border-[#003366] rounded-lg px-2 py-1 text-center w-24 uppercase font-bold text-[20px]">
+        <div id="manual-area" class="mt-6 flex gap-2 items-center justify-center w-full bg-white/50 p-4 rounded-xl border-2 border-white border-dashed">
+            <span class="text-[18px] text-[#003366] font-bold">手動打字：</span>
+            <input type="text" id="manual-code" placeholder="打 P碼 或 國字" class="border-2 border-[#003366] rounded-lg px-2 py-1 text-center w-36 uppercase font-bold text-[20px]">
             <button id="manual-submit" class="bg-[#003366] text-white font-black py-1 px-4 rounded-lg shadow-md hover:bg-blue-900 transition text-[20px]">送出</button>
         </div>
 
-        <p id="error-msg" class="text-white text-center mt-2 font-bold drop-shadow-md text-[20px]"></p>
+        <p id="error-msg" class="text-red-600 text-center mt-2 font-bold drop-shadow-md text-[18px] bg-white/80 px-2 py-1 rounded hidden"></p>
     </div>
 
     <div id="progress-area" style="display: none;" class="w-full max-w-[1200px] px-4 z-10 pb-36 grid grid-cols-1 lg:grid-cols-3 gap-6 mx-auto">
@@ -213,7 +208,7 @@
         };
 
         let collected = { wang: [], lin: [], eng: [] };
-        let html5QrcodeScanner;
+        let html5QrcodeScanner = null;
         
         const bgMusic = document.getElementById("bgMusic");
         const musicBtn = document.getElementById("music-btn");
@@ -222,6 +217,13 @@
 
         const isDisplayMode = window.location.search.includes('mode=display');
         const isScannerMode = window.location.search.includes('mode=scanner');
+
+        window.addEventListener('beforeunload', () => {
+            if (html5QrcodeScanner) {
+                try { html5QrcodeScanner.stop(); } catch(e) {}
+                try { html5QrcodeScanner.clear(); } catch(e) {}
+            }
+        });
 
         function updateMusicIcon() {
             if (bgMusic.paused) {
@@ -429,18 +431,34 @@
             }
         }
 
-        // 🔥 緊急手動輸入功能 🔥
         document.getElementById('manual-submit').addEventListener('click', () => {
             if (!isScannerMode) {
                 bgMusic.play().then(updateMusicIcon).catch(e => console.log(e));
             }
-            const key = document.getElementById('manual-code').value.trim().toUpperCase();
-            if (puzzlePieces[key]) {
-                set(ref(db, 'pieces/' + key), true);
+            const input = document.getElementById('manual-code').value.trim().toUpperCase();
+            let keyToUnlock = null;
+
+            if (puzzlePieces[input]) {
+                keyToUnlock = input; 
+            } else {
+                for (let k in puzzlePieces) {
+                    if (puzzlePieces[k].char.toUpperCase() === input) {
+                        const group = puzzlePieces[k].group;
+                        const isCollected = collected[group].some(item => item.key === k);
+                        if (!isCollected) {
+                            keyToUnlock = k;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (keyToUnlock) {
+                set(ref(db, 'pieces/' + keyToUnlock), true);
                 document.getElementById('manual-code').value = ''; 
                 revealProgressArea();
             } else {
-                alert("找不到這個代碼！請確認是輸入 P1 到 P27 喔！");
+                alert("找不到這個字，或者是這個字已經被解鎖過囉！");
             }
         });
 
@@ -449,19 +467,21 @@
                 bgMusic.play().then(updateMusicIcon).catch(error => console.log("音樂播放受限", error));
             }
             
+            document.getElementById('error-box').classList.add('hidden');
             revealProgressArea();
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('reader').classList.add('border-4', 'border-[#003366]', 'shadow-lg');
             
             html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            // 🔥 錯誤修正：恢復 html5-qrcode 官方支援的 facingMode 格式 🔥
             html5QrcodeScanner.start(
-                { facingMode: { ideal: "environment" } }, 
+                { facingMode: "environment" }, 
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 onScanSuccess
             ).catch(err => {
-                document.getElementById('error-msg').innerText = "相機被系統擋住了！請改用上方的手動輸入代碼！";
-                document.getElementById('start-btn').style.display = 'inline-block';
-                document.getElementById('reader').classList.remove('border-4', 'border-[#003366]', 'shadow-lg');
+                document.getElementById('error-box').classList.remove('hidden');
+                document.getElementById('error-msg').innerText = err;
             });
         });
 
@@ -496,6 +516,7 @@
                 document.getElementById('scanner-container').style.display = 'none';
                 document.getElementById('test-btn').style.display = 'none';
                 document.getElementById('reset-btn').style.display = 'none';
+                document.getElementById('manual-area').style.display = 'none';
                 revealProgressArea();
                 
                 document.body.addEventListener('click', () => {
